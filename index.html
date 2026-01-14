@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Semantic Search w przeglądarce — demo</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  </head>
+  <body>
+    <div id="app" class="app">
+      <header class="app__header">
+        <div>
+          <h1>Semantic Search w przeglądarce</h1>
+          <p class="subtitle">
+            Lokalne embeddingi, szybkie indeksowanie i wyszukiwanie semantyczne
+            dzięki transformers.js (bez wysyłki danych na serwer).
+          </p>
+        </div>
+        <button class="btn btn--primary" @click="runQuickDemo">
+          Załaduj i uruchom (quick demo)
+        </button>
+      </header>
+
+      <main class="app__grid">
+        <section class="panel">
+          <h2>Źródło danych</h2>
+          <div class="field">
+            <label>
+              <input type="radio" value="builtin" v-model="sourceMode" />
+              Wbudowany korpus ({{ builtinDocs.length }} akapitów)
+            </label>
+            <label>
+              <input type="radio" value="paste" v-model="sourceMode" />
+              Wklej JSON/CSV
+            </label>
+            <label>
+              <input type="radio" value="upload" v-model="sourceMode" />
+              Upload pliku tekstowego
+            </label>
+          </div>
+
+          <div v-if="sourceMode === 'paste'" class="field">
+            <textarea
+              v-model="pastedContent"
+              placeholder="Wklej JSON (array dokumentów) lub CSV (id,title,text)"
+            ></textarea>
+          </div>
+
+          <div v-if="sourceMode === 'upload'" class="field">
+            <input type="file" @change="handleFileUpload" />
+          </div>
+
+          <div class="field field--row">
+            <label class="stacked">
+              Limit długości (tokeny)
+              <input type="number" v-model.number="maxTokens" min="128" max="1024" />
+            </label>
+          </div>
+
+          <div class="field field--row">
+            <button class="btn" @click="prepareDocuments">
+              Wczytaj dokumenty
+            </button>
+            <button class="btn btn--primary" @click="indexDocuments" :disabled="isIndexing">
+              {{ isIndexing ? "Indeksowanie..." : "Indeksuj / Przelicz" }}
+            </button>
+          </div>
+
+          <div class="progress">
+            <div class="progress__bar" :style="{ width: progressPercent + '%' }"></div>
+          </div>
+          <p class="muted">
+            Zindeksowano {{ indexedCount }} / {{ totalDocs }} dokumentów.
+          </p>
+        </section>
+
+        <section class="panel panel--wide">
+          <h2>Wyszukiwanie</h2>
+          <div class="field">
+            <input
+              class="search"
+              type="text"
+              v-model="query"
+              @keydown.enter="runSearch"
+              placeholder="Wpisz zapytanie semantyczne..."
+            />
+          </div>
+          <div class="field field--row">
+            <button class="btn btn--primary" @click="runSearch" :disabled="!canSearch">
+              Szukaj
+            </button>
+            <span v-if="queryTimeMs" class="muted">Czas odpowiedzi: {{ queryTimeMs }} ms</span>
+          </div>
+
+          <div v-if="results.length" class="results">
+            <article v-for="result in results" :key="result.id" class="result">
+              <header>
+                <h3>{{ result.title || "Dokument " + result.id }}</h3>
+                <span class="score">score: {{ result.score.toFixed(3) }}</span>
+              </header>
+              <p v-html="result.highlighted"></p>
+              <footer class="tags" v-if="result.tags?.length">
+                <span v-for="tag in result.tags" :key="tag">{{ tag }}</span>
+              </footer>
+            </article>
+          </div>
+          <p v-else class="muted">Brak wyników. Załaduj dane i uruchom wyszukiwanie.</p>
+        </section>
+
+        <section class="panel">
+          <h2>Metryki i konfiguracja</h2>
+          <div class="metrics">
+            <div>
+              <strong>Model:</strong>
+              <span>{{ modelId }}</span>
+            </div>
+            <div>
+              <strong>Ładowanie modelu:</strong>
+              <span>{{ modelLoadMs ? modelLoadMs + ' ms' : '—' }}</span>
+            </div>
+            <div>
+              <strong>Średni czas / doc:</strong>
+              <span>{{ averageIndexMs ? averageIndexMs + ' ms' : '—' }}</span>
+            </div>
+            <div>
+              <strong>Cache embeddingów:</strong>
+              <span>{{ cacheCount }} wpisów</span>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="stacked">
+              Top-K
+              <input type="range" min="1" max="20" v-model.number="topK" />
+              <span class="muted">Wartość: {{ topK }}</span>
+            </label>
+          </div>
+          <div class="field">
+            <label class="stacked">
+              Próg podobieństwa
+              <input type="range" min="0" max="1" step="0.01" v-model.number="minScore" />
+              <span class="muted">Min: {{ minScore.toFixed(2) }}</span>
+            </label>
+          </div>
+
+          <div class="notice">
+            <strong>Offline po pierwszym pobraniu.</strong>
+            Wszystkie embeddingi liczone są lokalnie w przeglądarce.
+            Dane nie są wysyłane na serwer.
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="data.js"></script>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
