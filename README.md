@@ -2,7 +2,7 @@
 
 Statyczna aplikacja demonstracyjna pokazująca lokalne (bezserwerowe) generowanie
 embeddingów, indeksowanie oraz wyszukiwanie semantyczne w przeglądarce z użyciem
-`transformers.js` i Vue (CDN).
+`transformers.js` i Vue (CDN). Model jest ładowany z CDN `unpkg.com`.
 
 ## Uruchomienie
 
